@@ -1,4 +1,5 @@
 ---
+name: qa-report
 description: "Generate QA report for one or more GitHub PRs from weshake-bank repos"
 allowed-tools: WebFetch, WebSearch, Bash, Read, Write, Glob
 ---
@@ -49,54 +50,9 @@ For each PR, analyze the code (the diff) and the description to understand the c
 
 ### Step 4: Format the output
 
-**If it's a single PR number**, use this format:
+**If it's a single PR number**, use the format of the file `./assets/message_template.md`
 
-```
-Branch: <git branch>
-:memo: Change
-
-<Description of changes - be clear and concise, explain what was done and why>
-
-:white_check_mark: How to test
-
-<Explanation of how to test if possible, otherwise skip this section>
-
-PR: <PR URL>
-
-Please react with :white_check_mark: once tested or :bug: if a bug is found!
-```
-
-**If it's a list of PR numbers**, use the same format for each PR, separated by `---`:
-
-```
-Branch: <git branch 1>
-:memo: Change
-
-<Description of changes 1>
-
-:white_check_mark: How to test
-
-<Explanation 1>
-
-PR: <PR URL 1>
-
-Please react with :white_check_mark: once tested or :bug: if a bug is found!
-
----
-
-Branch: <git branch 2>
-:memo: Change
-
-<Description of changes 2>
-
-:white_check_mark: How to test
-
-<Explanation 2>
-
-PR: <PR URL 2>
-
-Please react with :white_check_mark: once tested or :bug: if a bug is found!
-```
+**If it's a list of PR numbers**, use the same format for each PR, separated by `---`.
 
 ### Step 5: Generate Postman collection (if new routes)
 

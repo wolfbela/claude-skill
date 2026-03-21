@@ -28,13 +28,13 @@ Pour chaque numéro de PR :
 Utilise la commande `gh` pour récupérer :
 
 1. Le titre et la description de la PR :
-    ```bash
-    gh api repos/weshake-bank/platform-api/pulls/<PR_NUMBER> --jq '{title: .title, body: .body}'
-    ```
+   ```bash
+   gh api repos/weshake-bank/platform-api/pulls/<PR_NUMBER> --jq '{title: .title, body: .body}'
+   ```
 2. Les fichiers modifiés et le diff :
-    ```bash
-    gh pr diff <PR_NUMBER>
-    ```
+   ```bash
+   gh pr diff <PR_NUMBER>
+   ```
 
 ### Étape 2 — Analyser l'impact front
 
@@ -42,77 +42,33 @@ Pour chaque fichier modifié dans le diff, détermine s'il a un impact front-end
 
 **Fichiers à analyser (impact front potentiel) :**
 
--   `router.*.js` — Nouveaux endpoints ou modifications de routes
--   `controller.*.js` — Changements dans les réponses API
--   `validator.*.js` — Changements dans les inputs attendus (body, query, params)
--   `service.*.js` — Uniquement si ça modifie la structure de la réponse renvoyée au controller
--   `models/*/index.js` — Nouveaux champs qui apparaissent dans les réponses API
--   `constant.helper.js` — Nouvelles valeurs d'enum utilisées dans les réponses
+- `router.*.js` — Nouveaux endpoints ou modifications de routes
+- `controller.*.js` — Changements dans les réponses API
+- `validator.*.js` — Changements dans les inputs attendus (body, query, params)
+- `service.*.js` — Uniquement si ça modifie la structure de la réponse renvoyée au controller
+- `models/*/index.js` — Nouveaux champs qui apparaissent dans les réponses API
+- `constant.helper.js` — Nouvelles valeurs d'enum utilisées dans les réponses
 
 **Fichiers à ignorer (pas d'impact front) :**
 
--   Migrations (`migrations/*.js`) — structure DB interne
--   Hooks (`hook.setting.js`) — logique interne
--   Tests (`tests/*.js`)
--   Fichiers de config
--   Changements purement internes dans les services qui ne modifient pas la réponse API
+- Migrations (`migrations/*.js`) — structure DB interne
+- Hooks (`hook.setting.js`) — logique interne
+- Tests (`tests/*.js`)
+- Fichiers de config
+- Changements purement internes dans les services qui ne modifient pas la réponse API
 
 ### Étape 3 — Lire le code source pour comprendre le contexte
 
 Pour chaque changement ayant un impact front, lis les fichiers sources complets (pas juste le diff) pour comprendre :
 
--   La structure complète de l'input (body/query/params) depuis le validator
--   La structure complète de l'output depuis le controller/service
--   Les codes d'erreur possibles
--   Les middlewares d'authentification requis
+- La structure complète de l'input (body/query/params) depuis le validator
+- La structure complète de l'output depuis le controller/service
+- Les codes d'erreur possibles
+- Les middlewares d'authentification requis
 
 ### Étape 4 — Rédiger la documentation
 
-Produis la documentation en suivant le format de sortie ci-dessous.
-
-## Format de sortie
-
-````markdown
-# Documentation Front-End — PRs [liste des numéros]
-
-> Date de génération : [date du jour]
-
----
-
-## [Méthode] [Route]
-
-> [Description rapide de l'endpoint ou du changement]
-
-**Authentification** : [Bearer token requis / Public / Admin only]
-
-**Input** :
-
-```json
-{
-	"champ": "type — description (requis/optionnel)"
-}
-```
-````
-
-**Output** :
-
-```json
-{
-	"champ": "type — description"
-}
-```
-
-**Codes d'erreur** :
-
--   `400` — Description
--   `401` — Non authentifié
--   `404` — Ressource non trouvée
-
-**Notes** :
-
--   Détails supplémentaires si pertinent
-
----
+Produis la documentation en suivant le format de sortie qui est dans `./assets/output_template.md`.
 
 ## Changements de réponse existante
 
@@ -124,13 +80,13 @@ Produis la documentation en suivant le format de sortie ci-dessous.
 
 ```json
 {
-	"nouveau_champ": "type — description"
+  "nouveau_champ": "type — description"
 }
 ```
 
 **Champs modifiés** :
 
--   `champ_x` : ancienne valeur → nouvelle valeur/structure
+- `champ_x` : ancienne valeur → nouvelle valeur/structure
 
 ---
 
