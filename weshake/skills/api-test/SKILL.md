@@ -1,9 +1,6 @@
 ---
 name: api-test
-description: >
-  Generate exhaustive API test scripts that cover all possibilities, edge cases, and corner cases for a given module/route. Use when the user wants to create thorough API tests.
-  Trigger: "create tests", "tests", "api tests", "test creation"
-  Does NOT Trigger when asking question on how to test. The goal is to create tests when explicity asked to.
+description: Generate exhaustive API test scripts covering all edge cases for a given module/route. Use when asked to create, generate, or write API tests — not for questions about testing.
 user-invocable: true
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 argument-hint: <module-name or route-file-path>
