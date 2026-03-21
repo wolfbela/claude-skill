@@ -1,5 +1,5 @@
 ---
-description: 'Check the security of the code, confirm it with some test, create ticket for confirmed issues'
+description: Check the security of the code, confirm it with some test, create ticket for confirmed issues
 allowed-tools: Bash, Read, Glob, Grep, EnterPlanMode, AskUserQuestion, Agent
 ---
 
@@ -16,17 +16,17 @@ On every and each issues, test those to confirm it or not.
 
 To test, you will have to curl the dev environnement. To do so, you will have to use those variables:
 
--   BASE_URL: https://platform-api-nprd.weshake.io/api/v1
+- BASE_URL: https://platform-api-nprd.weshake.io/api/v1
 
--   DEFAULT_USER_CREDENTIALS:
-    -   username: crisa@yopmail.com
-    -   password: @Tester123
--   OTHER_USER_CREDENTIALS:
-    -   username: aharon.oovoom@gmail.com
-    -   password: @Tester123
--   ADMIN_USER_CREDENTIALS:
-    -   username: sandra@30mille.com
-    -   password: admin123
+- DEFAULT_USER_CREDENTIALS:
+  - username: crisa@yopmail.com
+  - password: @Tester123
+- OTHER_USER_CREDENTIALS:
+  - username: aharon.oovoom@gmail.com
+  - password: @Tester123
+- ADMIN_USER_CREDENTIALS:
+  - username: sandra@30mille.com
+  - password: admin123
 
 ## Step 3: Create a reaport
 
