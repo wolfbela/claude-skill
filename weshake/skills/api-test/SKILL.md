@@ -41,7 +41,7 @@ Use the matching `BASE_URL` in the generated test file. If you cannot determine 
 ## Step 2 — Generate the test file
 
 Create the file at: `tests/<module>.test.js`
-Use the exact base referenced in `./references/test_template.js`.
+Use the exact base referenced in `./assets/test_template.js`.
 
 ## Step 3 — Test categories to cover for EACH endpoint
 
