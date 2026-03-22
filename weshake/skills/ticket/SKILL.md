@@ -1,6 +1,6 @@
 ---
 name: ticket
-description: Creates detailed technical tickets by analyzing the codebase. Use bullet points in the objective to create multiple tickets, or plain text for a single ticket.
+description: Creates detailed technical tickets by analyzing the codebase. Use bullet points in the objective to create multiple tickets, or plain text for a single ticket. Trigger it when we mention the need of creating a ticket about a subject.
 user-invocable: true
 allowed-tools: Read, Grep, Glob, Agent, Bash, Write
 argument-hint: <ticket(s) objective>
@@ -31,46 +31,45 @@ You are a professional Business Intelligence analyst with several years of exper
 
 ## Output Template
 
-For each ticket, produce exactly this format:
-
-```
-## Title: [Theme] Brief ticket description (max 15 words)
-
-### Description
-
-<Clear explanation of what needs to be done and why>
-
-### Endpoints
-
-> This section only appears if endpoints need to be created or modified.
-
-For each endpoint:
-- **Method & Route**: `POST /api/v1/example`
-- **Input**:
-  ```json
-  {
-    "field": "type — description"
-  }
-  ```
-- **Output**:
-  ```json
-  {
-    "field": "type — description"
-  }
-  ```
-
-### Files to Modify
-
-| File | Reason |
-|------|--------|
-| `path/to/file.js` | Explanation of why this file needs to be modified |
-```
+For each ticket, produce exactly the format showed in `./assets/output_template.md`.
 
 ## Saving
 
-After generating the tickets, save them in a Markdown file in `/tmp/`. The file name must follow the format: `tickets-<main-theme>-<timestamp>.md` (e.g., `tickets-auth-1710150000.md`). Use the `date +%s` command to get the timestamp.
+You need to push it to the task manager.
 
-Display the full path of the created file to the user at the end.
+Session cookies to put for the request:
+
+```json
+{
+  "Request Cookies": {
+    "csrftoken": "9vSfN8VOAOayLYnOfXXOJuGhw1xXNTYu",
+    "session-id": "ulzsg12nllpjq3tu4ned0bgfe7r45ie2xxn2kfd3r94ay2ri1gzytkyi6v28vek507qthtxo3k73ocy3k00xjp436r4um0cr9xrq05tl7p408xr79pon4fpvw3aip463"
+  }
+}
+```
+
+You need to do a curl POST following the following URL: `https://plane.oovoom.com/api/workspaces/weshake/projects/06e99a53-09fa-4c19-b0f8-39bf5acfaf51/issues/`
+
+And a body like this (adapt it with the content of the ticket):
+
+```json
+{
+  "project_id": "06e99a53-09fa-4c19-b0f8-39bf5acfaf51",
+  "type_id": null,
+  "name": "test",
+  "description_html": "<p></p>",
+  "estimate_point": null,
+  "state_id": "",
+  "parent_id": null,
+  "priority": "none",
+  "assignee_ids": [],
+  "label_ids": [],
+  "cycle_id": null,
+  "module_ids": null,
+  "start_date": null,
+  "target_date": null
+}
+```
 
 ## Rules
 

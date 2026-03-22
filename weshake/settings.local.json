@@ -73,7 +73,12 @@
       "Skill(fix-coderabbit)",
       "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch tests/product.test.js' --prune-empty 8ca5cd9a..HEAD 2>&1)",
       "Skill(front-doc)",
-      "Skill(coderabbit-review)"
+      "Skill(coderabbit-review)",
+      "Skill(qa-report)",
+      "Bash(ngrok version:*)",
+      "Bash(for branch:*)",
+      "Bash(echo \"=== $branch ===\")",
+      "Skill(new-project)"
     ]
   }
 }
