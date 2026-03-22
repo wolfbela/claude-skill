@@ -78,7 +78,14 @@
       "Bash(ngrok version:*)",
       "Bash(for branch:*)",
       "Bash(echo \"=== $branch ===\")",
-      "Skill(new-project)"
+      "Skill(new-project)",
+      "Bash(cp:*)",
+      "Bash(cp -r /home/jycxed/.claude/skills/superpowers/* /home/jycxed/Documents/weshake/api-1/.claude/skills/)",
+      "Bash(rm -rf /home/jycxed/.claude/skills/superpowers)",
+      "Bash(mkdir -p /home/jycxed/Documents/weshake/api-1/.claude/skills/superpowers)",
+      "Bash(for dir:*)",
+      "Bash(for pr:*)",
+      "Bash(echo \"=== PR #$pr ===\")"
     ]
   }
 }
