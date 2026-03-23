@@ -85,7 +85,13 @@
       "Bash(mkdir -p /home/jycxed/Documents/weshake/api-1/.claude/skills/superpowers)",
       "Bash(for dir:*)",
       "Bash(for pr:*)",
-      "Bash(echo \"=== PR #$pr ===\")"
+      "Bash(echo \"=== PR #$pr ===\")",
+      "Bash(xargs -I {} ls -la {})",
+      "Bash(-print)",
+      "Bash(while read:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzOWVlOWRhLWNmOTQtMTFlZC1hZmExLTAyNDJhYzEyMDAwMiIsIm93bmVyX2lkIjpudWxsLCJpc19hZG1pbl9hY2Nlc3MiOmZhbHNlLCJpc19zdGFmZl9hZG1pbiI6ZmFsc2UsImlhdCI6MTc3NDI1MDMwNCwiZXhwIjoxNzc0MjUzOTA0fQ.xmWopp1C1xRhdv9rBfIXAiNkaGjg0iwyjq4BVFumVsU\")",
+      "Bash(npm ls:*)",
+      "Bash(npm start:*)"
     ]
   }
 }

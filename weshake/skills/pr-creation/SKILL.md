@@ -39,3 +39,4 @@ The description need to be as human as possible and formal as possible. Max 50 w
 
 - A PR shound **never** have **more than 1000 lines insertion**
   > If there is more, you have to **split between multiple branche** and **make a PR for each**
+- **never** add test files in the PR.

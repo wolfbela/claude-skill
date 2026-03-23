@@ -35,7 +35,7 @@ The user provides a description of what they want to do via the argument: $ARGUM
 
 ### Step 2: Enter plan mode
 
-Immediately start brainstorming with the `superpowers:brainstorming` skill to:
+Immediately start brainstorming with the `/brainstorming` skill to:
 
 1. **Fully understand the requirement**:
    > It has to go through all the dependence tree and ask relentlessly until having a complete understanding of the
@@ -47,7 +47,7 @@ Immediately start brainstorming with the `superpowers:brainstorming` skill to:
 
 ### Step 3: Test the code
 
-You must run the /test-api skill to create the test file in the `tests` directory and run it to verify the
+You must run the /test-api skill to create the test file in the `tests` directory and run it to verify that the
 implementation works.
 
 ### Step 4: Push the code
