@@ -1,6 +1,10 @@
 {
   "permissions": {
     "allow": [
+      "Write(/tmp/**)",
+      "Edit(/tmp/**)",
+      "Write(.claude/**)",
+      "Edit(.claude/**)",
       "Bash(docker exec:*)",
       "Bash(gh pr:*)",
       "Bash(gh api:*)",
@@ -91,7 +95,14 @@
       "Bash(while read:*)",
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzOWVlOWRhLWNmOTQtMTFlZC1hZmExLTAyNDJhYzEyMDAwMiIsIm93bmVyX2lkIjpudWxsLCJpc19hZG1pbl9hY2Nlc3MiOmZhbHNlLCJpc19zdGFmZl9hZG1pbiI6ZmFsc2UsImlhdCI6MTc3NDI1MDMwNCwiZXhwIjoxNzc0MjUzOTA0fQ.xmWopp1C1xRhdv9rBfIXAiNkaGjg0iwyjq4BVFumVsU\")",
       "Bash(npm ls:*)",
-      "Bash(npm start:*)"
+      "Bash(npm start:*)",
+      "Skill(update-config)",
+      "Bash(find /home/jycxed/Documents/weshake/api-1/src -type f \\\\\\(-name *auth* -o -name *login* \\\\\\))",
+      "Bash(gh search:*)",
+      "Bash(for skill:*)"
+    ],
+    "additionalDirectories": [
+      "/tmp"
     ]
   }
 }

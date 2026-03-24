@@ -354,6 +354,15 @@ Bug found? Write failing test reproducing it. Follow TDD cycle. Test proves fix 
 
 Never fix bugs without a test.
 
+## Codebase Best Practices
+
+Before writing implementation code, read `references/best-practices.md`. This file contains battle-tested patterns extracted from real code review fixes in this codebase — input validation, cascade-delete safety, soft-delete indexes, resource cleanup, transaction scoping, and more. Cross-check your GREEN phase code against these patterns, especially when writing:
+- Validators (Joi schemas, regex, create vs update)
+- Delete operations (cascade, shared resources, S3 cleanup)
+- Bulk updates (parent scoping, idempotency)
+- Model hooks (guard conditions, side effects)
+- Migrations (idempotent operations)
+
 ## Testing Anti-Patterns
 
 When adding mocks or test utilities, read @testing-anti-patterns.md to avoid common pitfalls:
