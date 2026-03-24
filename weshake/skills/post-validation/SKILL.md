@@ -4,11 +4,12 @@ description: >
   When I receive a PR or multiple PRs I need to générate multiple things for following the wanted process and improving the best-practices.
 ---
 
-When you receive PRs number you should do 2 thing:
+When you receive PRs number you should do 2 steps:
 
 ## Step 1: test in dev environnement:
 
-You should find the test file in `tests/` and change the base url in it two: `https://platform-api-nprd.weshake.io/api/v1`
+You should find the test file in `tests/` and make a temporary copy of the file and change the base url in it two: `https://platform-api-nprd.weshake.io/api/v1`
+You can launch on agent doing the test per PR to go faster.
 
 The goal is to check everything in the dev environnement to see if the PR did well
 
@@ -16,7 +17,9 @@ Two possible ending:
 **It's working**: go to step 2
 **It's not working**: right a reaport on this and use /ticket skill to create a ticket on fixing it.
 
-## Step 2:
+> If the test are not working, **before looking at the code to create the ticket** look at the pipeline of the github if it did broke (the pipeline) and explain why in the report but no need to create a ticket
+
+## Step 2: Create documents to send and for self-improvement
 
 I need 3 agents in parallèle resolving the PRs listed in $ARGUMENTS:
 
