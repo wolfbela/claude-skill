@@ -38,3 +38,7 @@ I need 3 agents in parallèle resolving the PRs listed in $ARGUMENTS:
   > When adding a new best practice, append it to BOTH files with the same content.
 
 **MANDATORY**: Ask me for rights to right to write where they need too write and read if needed
+
+## Rules:
+
+- All the documents should be **in english**
