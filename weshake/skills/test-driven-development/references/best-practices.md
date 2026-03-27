@@ -11,7 +11,7 @@ Every route endpoint must have a Joi validation middleware. Missing validation a
 **Bad implementation:**
 
 ```js
-router.get('/:id/required-documents', controller.getRequiredDocuments);
+router.get("/:id/required-documents", controller.getRequiredDocuments);
 ```
 
 **Good implementation:**
@@ -23,7 +23,11 @@ const schema_getRequiredDocuments = {
   }),
 };
 
-router.get('/:id/required-documents', validate(schema_getRequiredDocuments), controller.getRequiredDocuments);
+router.get(
+  "/:id/required-documents",
+  validate(schema_getRequiredDocuments),
+  controller.getRequiredDocuments,
+);
 ```
 
 ---
@@ -134,7 +138,11 @@ if (employee.user_id && !employee.is_owner) {
 ```js
 await destroy(EMPLOYEE, { id: employeeId }, { transaction });
 if (employee.user_id && !employee.is_owner) {
-  const otherRefs = await count(EMPLOYEE, { user_id: employee.user_id }, { transaction });
+  const otherRefs = await count(
+    EMPLOYEE,
+    { user_id: employee.user_id },
+    { transaction },
+  );
   if (otherRefs === 0) {
     await destroy(USER, { id: employee.user_id }, { transaction });
   }
@@ -158,7 +166,11 @@ await updateOne(MODEL, id, { position: newPosition });
 
 ```js
 // Scoped to parent — prevents cross-entity mutation
-await updateWhere(MODEL, { id, [parentFK]: parentId }, { position: newPosition });
+await updateWhere(
+  MODEL,
+  { id, [parentFK]: parentId },
+  { position: newPosition },
+);
 ```
 
 ---
@@ -171,7 +183,9 @@ Unique indexes on paranoid models must account for soft-deleted rows. A soft-del
 
 ```js
 // Soft-deleted row blocks re-creation
-queryInterface.addIndex('product_suppliers', ['product_id', 'supplier_id'], { unique: true });
+queryInterface.addIndex("product_suppliers", ["product_id", "supplier_id"], {
+  unique: true,
+});
 ```
 
 **Good implementation:**
@@ -227,7 +241,7 @@ If a subquery or eager-loaded association is expensive (correlated subquery, hea
 function getDefaultUserIncludes() {
   return [
     { model: PROFILE },
-    { model: ENDING_PROCESS, limit: 1, order: [['created_at', 'DESC']] }, // expensive, always loaded
+    { model: ENDING_PROCESS, limit: 1, order: [["created_at", "DESC"]] }, // expensive, always loaded
   ];
 }
 ```
@@ -238,7 +252,11 @@ function getDefaultUserIncludes() {
 function getDefaultUserIncludes({ includeEndingProcess = false } = {}) {
   const includes = [{ model: PROFILE }];
   if (includeEndingProcess) {
-    includes.push({ model: ENDING_PROCESS, limit: 1, order: [['created_at', 'DESC']] });
+    includes.push({
+      model: ENDING_PROCESS,
+      limit: 1,
+      order: [["created_at", "DESC"]],
+    });
   }
   return includes;
 }
@@ -355,17 +373,17 @@ When matching against a list of rules (exact match, prefix match, wildcard), use
 
 ```js
 // Depends on array order — prefix might match before exact
-const rule = rules.find(r => code.startsWith(r.code));
+const rule = rules.find((r) => code.startsWith(r.code));
 ```
 
 **Good implementation:**
 
 ```js
 // Explicit priority: exact match first, then prefix
-const exactMatch = rules.find(r => r.code === code);
+const exactMatch = rules.find((r) => r.code === code);
 if (exactMatch) return exactMatch;
 
-const prefixMatch = rules.find(r => code.startsWith(r.code));
+const prefixMatch = rules.find((r) => code.startsWith(r.code));
 return prefixMatch || null;
 ```
 
@@ -417,9 +435,9 @@ Before creating an alert, notification, or any entity that could be triggered mu
 ```js
 // Called on every webhook — creates duplicates
 await create(ALERT, {
-  type: 'AML',
+  type: "AML",
   stakeholder_identifier: stakeholder.id,
-  status: 'active',
+  status: "active",
 });
 ```
 
@@ -427,15 +445,15 @@ await create(ALERT, {
 
 ```js
 const existing = await findOne(ALERT, {
-  type: 'AML',
+  type: "AML",
   stakeholder_identifier: stakeholder.id,
-  status: 'active',
+  status: "active",
 });
 if (!existing) {
   await create(ALERT, {
-    type: 'AML',
+    type: "AML",
     stakeholder_identifier: stakeholder.id,
-    status: 'active',
+    status: "active",
   });
 }
 ```
@@ -472,25 +490,23 @@ If Joi (or another validator) provides a `.default()` value, do not add a runtim
 
 ```js
 // Joi schema
-status: Joi.string().valid('open', 'closed').default('open'),
-
-// Controller — redundant
-function makeData(body) {
-  if (!body.status) body.status = 'open'; // already handled by Joi
-  return body;
-}
+status: (Joi.string().valid("open", "closed").default("open"),
+  // Controller — redundant
+  function makeData(body) {
+    if (!body.status) body.status = "open"; // already handled by Joi
+    return body;
+  });
 ```
 
 **Good implementation:**
 
 ```js
 // Joi schema — single source of truth for defaults
-status: Joi.string().valid('open', 'closed').default('open'),
-
-// Controller — trust the validator
-function makeData(body) {
-  return body; // status is guaranteed to be set by Joi
-}
+status: (Joi.string().valid("open", "closed").default("open"),
+  // Controller — trust the validator
+  function makeData(body) {
+    return body; // status is guaranteed to be set by Joi
+  });
 ```
 
 ---
@@ -502,23 +518,31 @@ Do not leave `paranoid`-related config (e.g., `deletedAt: 'deleted_at'`) on mode
 **Bad implementation:**
 
 ```js
-const Model = sequelize.define('calendar', {
-  // ...
-}, {
-  paranoid: false,
-  deletedAt: 'deleted_at', // dead config — paranoid is false
-});
+const Model = sequelize.define(
+  "calendar",
+  {
+    // ...
+  },
+  {
+    paranoid: false,
+    deletedAt: "deleted_at", // dead config — paranoid is false
+  },
+);
 ```
 
 **Good implementation:**
 
 ```js
-const Model = sequelize.define('calendar', {
-  // ...
-}, {
-  paranoid: false,
-  // no deletedAt — paranoid is disabled
-});
+const Model = sequelize.define(
+  "calendar",
+  {
+    // ...
+  },
+  {
+    paranoid: false,
+    // no deletedAt — paranoid is disabled
+  },
+);
 ```
 
 ---
@@ -531,7 +555,7 @@ Model hooks that trigger side effects (score recomputation, notifications) shoul
 
 ```js
 Alert.afterUpdate(async (alert) => {
-  const statusChanged = alert.changed('status');
+  const statusChanged = alert.changed("status");
   if (!statusChanged) return; // WRONG: score depends on severity too
 
   await computeUserRiskScoreSafe(alert.user_id);
@@ -547,7 +571,7 @@ Alert.afterUpdate(async (alert) => {
   await computeUserRiskScoreSafe(alert.user_id);
 
   // Only record history on status transitions
-  if (alert.changed('status')) {
+  if (alert.changed("status")) {
     await recordHistory(alert);
   }
 });
@@ -593,9 +617,9 @@ When a service method exists for creating/updating an entity (with timestamps, h
 ```js
 // Raw DB call — bypasses service logic, timestamps, hooks
 await create(ALERT, {
-  type: 'AML_ENTERPRISE',
+  type: "AML_ENTERPRISE",
   user_id: userId,
-  status: 'active',
+  status: "active",
 });
 ```
 
@@ -604,9 +628,9 @@ await create(ALERT, {
 ```js
 // Service method — handles timestamps, defaults, and hooks consistently
 await OnboardingAlertService.createAlert({
-  type: 'AML_ENTERPRISE',
+  type: "AML_ENTERPRISE",
   user_id: userId,
-  status: 'active',
+  status: "active",
 });
 ```
 
@@ -625,7 +649,9 @@ await s3.deleteObject(key).catch(() => {}); // failure is invisible
 **Good implementation:**
 
 ```js
-await s3.deleteObject(key).catch(err => console.error('S3 cleanup failed:', err));
+await s3
+  .deleteObject(key)
+  .catch((err) => console.error("S3 cleanup failed:", err));
 ```
 
 ---
@@ -698,9 +724,13 @@ A typo in a `.or()` or `.xor()` clause (e.g., `'contact'` instead of `'contacts'
 ```js
 const schema = {
   body: Joi.object({
-    contacts: Joi.array().items(Joi.object({ /* ... */ })),
+    contacts: Joi.array().items(
+      Joi.object({
+        /* ... */
+      }),
+    ),
     file: Joi.string().optional(),
-  }).or('contact', 'file'), // typo: 'contact' instead of 'contacts' — constraint is silently ignored
+  }).or("contact", "file"), // typo: 'contact' instead of 'contacts' — constraint is silently ignored
 };
 ```
 
@@ -709,9 +739,13 @@ const schema = {
 ```js
 const schema = {
   body: Joi.object({
-    contacts: Joi.array().items(Joi.object({ /* ... */ })),
+    contacts: Joi.array().items(
+      Joi.object({
+        /* ... */
+      }),
+    ),
     file: Joi.string().optional(),
-  }).or('contacts', 'file'), // correct field name — at least one must be provided
+  }).or("contacts", "file"), // correct field name — at least one must be provided
 };
 ```
 
@@ -829,135 +863,6 @@ updateFields: {
 
 ---
 
-## 30. Use atomic status guards in cron jobs to prevent duplicate processing
+## 30. Write Migration for MySQL
 
-When a cron job processes rows by status, include the current status in the `WHERE` clause of the update. This prevents concurrent runners (or re-runs) from processing the same row twice. If `affectedCount === 0`, another runner already claimed it — skip silently.
-
-**Bad implementation:**
-
-```js
-const reminder = await findOne(REMINDER, { id: reminder.id });
-if (reminder.status !== SCHEDULED) return;
-await updateWhere(REMINDER, { id: reminder.id }, { status: CANCELLED });
-// Race condition: another runner can read SCHEDULED between the find and the update
-```
-
-**Good implementation:**
-
-```js
-const [affected] = await updateWhere(REMINDER, { id: reminder.id, status: SCHEDULED }, {
-  status: CANCELLED,
-  status_updated_at: new Date(),
-});
-if (affected === 0) return; // already claimed by another runner
-```
-
----
-
-## 31. Re-throw errors after logging in helper functions called by batch jobs
-
-When an email or notification helper catches an error and logs it, also re-throw so the caller (e.g., a cron job wrapper like `safeNotify`) can observe the failure and count it. Swallowing errors silently hides delivery failures from monitoring.
-
-**Bad implementation:**
-
-```js
-const sendReminderEmail = async (user, data) => {
-  try {
-    await emailHelper.sendEmail(subject, user.email, null, null, html);
-  } catch (err) {
-    console.error('sendReminderEmail error', err);
-    // Error swallowed — caller has no idea the email failed
-  }
-};
-```
-
-**Good implementation:**
-
-```js
-const sendReminderEmail = async (user, data) => {
-  try {
-    await emailHelper.sendEmail(subject, user.email, null, null, html);
-  } catch (err) {
-    console.error('sendReminderEmail error', err);
-    throw err; // Caller (safeNotify) can now count failures for observability
-  }
-};
-```
-
----
-
-## 32. Return counts from batch/cron operations for observability
-
-Batch operations (cron jobs, bulk processors) should return structured counts of what they did. This enables monitoring, alerting, and test assertions without parsing logs.
-
-**Bad implementation:**
-
-```js
-const processOverdueReminders = async () => {
-  for (const reminder of overdueReminders) {
-    await postponeReminder(reminder);
-  }
-  console.log('Done');
-};
-```
-
-**Good implementation:**
-
-```js
-const processOverdueReminders = async () => {
-  let postponedCount = 0, missedCount = 0, errorCount = 0;
-  for (const reminder of overdueReminders) {
-    try {
-      await postponeReminder(reminder);
-      postponedCount++;
-    } catch (err) {
-      errorCount++;
-      console.error(`Error processing reminder ${reminder.id}:`, err);
-    }
-  }
-  console.error(`Processed: ${postponedCount} postponed, ${missedCount} missed, ${errorCount} errors`);
-  return { postponedCount, missedCount, errorCount };
-};
-```
-
----
-
-## 33. Use raw strings in email subjects, HTML-escape only the body
-
-Email subjects are rendered as plain text by mail clients. Using `escape()` or HTML entities in subjects produces ugly literal strings like `Rappel report&eacute;`. Only escape values injected into the HTML body.
-
-**Bad implementation:**
-
-```js
-const safeName = escape(companyName);
-const subject = `[WeShake] Rappel reporté — ${safeName}`;
-// Subject shows: "[WeShake] Rappel report&eacute; — Soci&eacute;t&eacute; Dupont"
-```
-
-**Good implementation:**
-
-```js
-const safeName = escape(companyName); // For HTML body only
-const subject = `[WeShake] Rappel reporté — ${companyName}`; // Raw string for subject
-const bodyContent = `<p>Ton rappel pour <strong>${safeName}</strong>...</p>`; // Escaped for HTML
-```
-
----
-
-## 34. Use nullish coalescing (`??`) instead of `||` when preserving falsy values
-
-`||` treats `0`, `""`, and `false` as falsy and falls through to the default. Use `??` when empty strings or zero are valid values that should be preserved.
-
-**Bad implementation:**
-
-```js
-notes: oldReminder.notes || null,
-// If notes is "" (empty string), this becomes null — losing the intentional empty value
-```
-
-**Good implementation:**
-
-```js
-notes: oldReminder.notes ?? null,
-// Only falls through to null if notes is null or undefined, preserving "" and 0
-```
+The Database is on **MYSQL**. if the migrations are not written for this it wont work.

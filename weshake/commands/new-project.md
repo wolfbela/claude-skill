@@ -23,7 +23,7 @@ The user provides a description of what they want to do via the argument: $ARGUM
    - `refactor/<short-description>` for refactoring
    - `chore/<short-description>` for maintenance
 
-   The branch name must be in kebab-case, concise and descriptive.
+   branch name must be in kebab-case, concise and descriptive.
 
 3. Create the branch:
 
@@ -50,10 +50,14 @@ Immediately start brainstorming with the `/brainstorming` skill to:
 You must run the /test-api skill to create the test file in the `tests` directory and run it to verify that the
 implementation works.
 
+**Before runing the tests** you must run the migrations created in the project.
+
 ### Step 4: Push the code
 
 You must commit the code in 1 or more commits **without mentioning CLAUDE**. Then push it and use the /pr-creation skill
 to create the associated PR.
+
+**Never add test files in the commit but never delete them**.
 
 ### Important
 

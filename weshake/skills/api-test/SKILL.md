@@ -134,6 +134,16 @@ async function run() {
 }
 ```
 
+## Step 5 — Testing phase
+
+The testing phase is in three steps:
+
+1. Make the migrations.
+   > On the **right container** launch the command like `npm db:migrate` to do the migrations and verify they work
+2. Install dependancies.
+   > On the **right container** launch the command `npm i` to install the modules and check it is working
+3. Launch the test files.
+
 ## Rules
 
 - **NEVER skip an endpoint.** Every route in the router MUST be tested.
