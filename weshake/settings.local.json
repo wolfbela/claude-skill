@@ -118,7 +118,8 @@
       "Bash(mysql)",
       "Bash(db)",
       "Bash(mariadb)",
-      "Bash(mysql:*)"
+      "Bash(mysql:*)",
+      "Bash(chmod:*)"
     ],
     "additionalDirectories": [
       "/tmp"

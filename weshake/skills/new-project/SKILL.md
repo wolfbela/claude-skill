@@ -1,6 +1,9 @@
 ---
+name: new-project
 description: "Create a branch from develop and enter plan mode to analyze the codebase"
+user-invocable: true
 allowed-tools: Bash, Read, Glob, Grep, EnterPlanMode, AskUserQuestion, Agent
+argument-hint: <description or ticket link>
 ---
 
 # Start Feature/Fix Branch
@@ -8,6 +11,16 @@ allowed-tools: Bash, Read, Glob, Grep, EnterPlanMode, AskUserQuestion, Agent
 ## Instructions
 
 The user provides a description of what they want to do via the argument: $ARGUMENTS
+
+### Step 0: Conditional
+
+**If the $ARGUMENTS is a link of a ticket** you should fetch it by running the script:
+
+```bash
+bash /home/jycxed/.claude-skills/weshake/skills/new-project/scripts/fetch_ticket.sh "<ticket-url>"
+```
+
+Look at the `name` and `description_html` fields in the JSON response for the informations.
 
 ### Step 1: Create the branch
 
@@ -47,17 +60,15 @@ Immediately start brainstorming with the `/brainstorming` skill to:
 
 ### Step 3: Test the code
 
-You must run the /test-api skill to create the test file in the `tests` directory and run it to verify that the
-implementation works.
-
-**Before runing the tests** you must run the migrations created in the project.
+You must run the /test-api skill to test.
 
 ### Step 4: Push the code
 
 You must commit the code in 1 or more commits **without mentioning CLAUDE**. Then push it and use the /pr-creation skill
 to create the associated PR.
 
-**Never add test files in the commit but never delete them**.
+- **Never add test files in the commit but never delete them**.
+- **If there is a link sent in argument** put it in the PR description.
 
 ### Important
 

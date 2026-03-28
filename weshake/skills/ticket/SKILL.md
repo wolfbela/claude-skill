@@ -35,41 +35,18 @@ For each ticket, produce exactly the format showed in `./assets/output_template.
 
 ## Saving
 
-You need to push it to the task manager.
+Push each ticket to the task manager by calling the script `./scripts/create_ticket.sh` with two arguments:
 
-Session cookies to put for the request:
+1. **name**: The ticket title (plain string, e.g. `"[Auth] Add password reset endpoint"`)
+2. **description**: The ticket description in HTML (plain string, e.g. `"<p>Description here</p>"`)
 
-```json
-{
-  "Request Cookies": {
-    "csrftoken": "9vSfN8VOAOayLYnOfXXOJuGhw1xXNTYu",
-    "session-id": "ulzsg12nllpjq3tu4ned0bgfe7r45ie2xxn2kfd3r94ay2ri1gzytkyi6v28vek507qthtxo3k73ocy3k00xjp436r4um0cr9xrq05tl7p408xr79pon4fpvw3aip463"
-  }
-}
+Example:
+
+```bash
+bash ./scripts/create_ticket.sh "[Auth] Add password reset endpoint" "<p>Implement the POST /auth/reset-password endpoint...</p>"
 ```
 
-You need to do a curl POST following the following URL: `https://plane.oovoom.com/api/workspaces/weshake/projects/06e99a53-09fa-4c19-b0f8-39bf5acfaf51/issues/`
-
-And a body like this (adapt it with the content of the ticket):
-
-```json
-{
-  "project_id": "06e99a53-09fa-4c19-b0f8-39bf5acfaf51",
-  "type_id": null,
-  "name": "test",
-  "description_html": "<p></p>",
-  "estimate_point": null,
-  "state_id": "",
-  "parent_id": null,
-  "priority": "none",
-  "assignee_ids": [],
-  "label_ids": [],
-  "cycle_id": null,
-  "module_ids": null,
-  "start_date": null,
-  "target_date": null
-}
-```
+The script handles authentication (login + cookie extraction) automatically before creating the ticket.
 
 ## Rules
 
