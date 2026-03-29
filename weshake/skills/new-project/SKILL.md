@@ -22,6 +22,8 @@ bash /home/jycxed/.claude-skills/weshake/skills/new-project/scripts/fetch_ticket
 
 Look at the `name` and `description_html` fields in the JSON response for the informations.
 
+> **After the fetch** change the name of the session by the name of the ticket
+
 ### Step 1: Create the branch
 
 1. First, make sure you are on the `develop` branch and that it is up to date:
@@ -58,7 +60,7 @@ Immediately start brainstorming with the `/brainstorming` skill to:
 4. **Understand existing patterns** to stay consistent with the current code
 5. **Ask questions** to the user about ambiguous points or implementation choices
 
-### Step 3: Test the code
+### Step 3: Test the code **MANDATORY**
 
 You must run the /test-api skill to test.
 
