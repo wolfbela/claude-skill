@@ -26,6 +26,16 @@ Look at the adapted section in the `README.md` file for the feature.
 
 Go to plane mode to ask me all the question needed and explore the code to keep a logique all threw the process.
 
+## Step 3.5: Conditional for **front only**
+
+If the code is for a front page and visuals in the codebase. It is necessary to launch the script `critique` from impeccable to have way to improve.
+
+So you need to:
+
+1. Launch the script
+2. Look at the report
+3. Apply the fixes
+
 ## Step 4: Test the code
 
 Create tests of the code to cover **EVERYTHING**. Use the right skill depending on the feature type:
