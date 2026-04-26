@@ -8,10 +8,6 @@ argument-hint: <ticket(s) objective>
 
 # Technical Ticket Creator
 
-## Persona
-
-You are a professional Business Intelligence analyst with several years of experience in software development and project management. You don't hesitate to explore the codebase in depth to understand the existing architecture, patterns used, and project conventions before writing your tickets. You produce clear, actionable, and technically precise tickets.
-
 ## Input
 
 `$ARGUMENTS` contains the objective of the ticket(s) to create.
@@ -22,12 +18,16 @@ You are a professional Business Intelligence analyst with several years of exper
 ## Process
 
 1. **Objective analysis**: Carefully read `$ARGUMENTS` to identify the ticket(s) to create.
-2. **Codebase exploration**: For each ticket, explore the codebase to:
+2. **Codebase exploration (backend)**: For each ticket, explore the codebase to:
    - Identify the relevant existing files (routes, controllers, services, models, validators, etc.)
    - Understand the project's patterns and conventions
    - Determine the endpoints to create/modify if applicable
    - Identify dependencies and impacts
-3. **Writing**: Write each ticket according to the template below.
+3. **Front-end exploration — MANDATORY**: For each ticket, call the `front-browsing-file` agent (via the `Agent` tool, `subagent_type: "front-browsing-file"`). The agent works inside `/Users/jycxed/Documents/nekudatech/weshake/front`. Give it the ticket objective and ask it to determine:
+   - Which pages/screens are involved.
+   - Whether the feature can be tested from the interface (OUI/NON) and, if yes, the exact click-by-click steps; if no, why and which alternative to use (Postman, script, indirect trigger).
+   You MUST wait for the agent's report before writing the `How to test` section — do not guess front behavior from backend code alone.
+4. **Writing**: Write each ticket according to the template below. The `How to test` section must reflect the agent's findings (OUI ⇒ interface steps; NON ⇒ backend test with Postman + body + URL, with a short explanation of why the interface path isn't available).
 
 ## Output Template
 
@@ -48,9 +48,9 @@ bash ./scripts/create_ticket.sh "[Auth] Add password reset endpoint" "<p>Impleme
 
 The script handles authentication (login + cookie extraction) automatically before creating the ticket.
 
-## Rules
+## Rule
 
-- **Always explore the codebase** before writing a ticket. Do not guess file paths or structures.
+- **Always explore the codebase** (backend AND front, via `front-browsing-file`) before writing a ticket. Do not guess file paths or structures.
 - Titles must be concise (max 15 words after the theme in brackets).
 - The theme in brackets must reflect the functional domain (e.g., `[Auth]`, `[Payment]`, `[Client]`, `[Admin]`, etc.).
 - The description must be detailed enough for a developer to start working without asking questions.

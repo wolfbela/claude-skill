@@ -57,6 +57,21 @@ Pour chaque fichier modifié dans le diff, détermine s'il a un impact front-end
 - Fichiers de config
 - Changements purement internes dans les services qui ne modifient pas la réponse API
 
+**Lecture du code front — OBLIGATOIRE**
+
+Tu DOIS appeler l'agent `front-browsing-file` via l'outil `Agent` (`subagent_type: "front-browsing-file"`) **avant** de rédiger la documentation. L'agent travaille dans `/Users/jycxed/Documents/nekudatech/weshake/front`.
+
+Fournis-lui, pour chaque endpoint/changement API identifié dans la PR :
+- la méthode + route (ex: `POST /api/v1/clients/:id/notes`)
+- les champs nouveaux/modifiés dans le body ou la réponse
+
+Et demande-lui explicitement :
+1. Quelles pages/écrans consomment (ou vont consommer) cet endpoint.
+2. Quels fichiers front (`src/api/...`, `src/features/...`, typages TS) doivent être mis à jour.
+3. Si l'endpoint n'est pas encore branché côté front, le signaler clairement.
+
+Tu dois attendre le rapport de l'agent avant d'écrire la documentation — n'invente pas le parcours front depuis le diff backend seul.
+
 ### Étape 3 — Lire le code source pour comprendre le contexte
 
 Pour chaque changement ayant un impact front, lis les fichiers sources complets (pas juste le diff) pour comprendre :

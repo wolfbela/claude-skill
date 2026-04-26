@@ -826,3 +826,432 @@ updateFields: {
     .optional(),
 },
 ```
+
+---
+
+## 30. Keep API response payloads in snake_case to match the platform convention
+
+All HTTP response payloads must use `snake_case` keys — the same casing as database columns and the rest of the public API. Mixing `camelCase` for new endpoints forces frontend consumers to handle two naming schemes and breaks shared serializers/typings. Transform only when absolutely necessary, and do it consistently.
+
+**Bad implementation:**
+
+```js
+return rows.map((row) => {
+  const plain = row.get({ plain: true });
+  return {
+    id: plain.id,
+    actionType: plain.action_type,
+    occurredAt: plain.occurred_at,
+    previousStatus: plain.previous_status,
+    newStatus: plain.new_status,
+    businessOpportunity: plain.business_opportunity
+      ? { id: plain.business_opportunity.id, name: buildName(plain.business_opportunity) }
+      : null,
+    contact: plain.contact
+      ? { id: plain.contact.id, fullName: buildContactFullName(plain.contact) }
+      : null,
+  };
+});
+```
+
+**Good implementation:**
+
+```js
+return rows.map((row) => {
+  const plain = row.get({ plain: true });
+  return {
+    id: plain.id,
+    action_type: plain.action_type,
+    occurred_at: plain.occurred_at,
+    previous_status: plain.previous_status,
+    new_status: plain.new_status,
+    business_opportunity: plain.business_opportunity
+      ? { id: plain.business_opportunity.id, name: buildName(plain.business_opportunity) }
+      : null,
+    contact: plain.contact
+      ? { id: plain.contact.id, full_name: buildContactFullName(plain.contact) }
+      : null,
+  };
+});
+```
+
+---
+
+## 31. Distinguish actor identity from owner identity for account-scoped ownership checks
+
+On multi-user accounts (owner + staff/assistants), `user.id` is the caller making the request (actor), while `user.owner_id || user.id` is the logical owner of the account. Ownership checks on resources (group chats, customers, calendars) must compare against the **owner** identity so that staff can manage resources created by or for their owner. Using `user.id` alone locks staff out of their own account's data. Conversely, membership/participation lists must use the actor (so the staff member is actually added as a participant, not the owner).
+
+**Bad implementation:**
+
+```js
+const updateGroupChat = async (user, id, body) => {
+  const userId = user.id;
+  const group = await getGroupChatById(user, id);
+
+  // Staff member can never pass this check on a group owned by their account owner
+  if (group.owner_group.id !== userId) {
+    throw createError.BadRequest(YOU_ARE_NOT_THE_GROUP);
+  }
+
+  if (!members.includes(userId)) {
+    members.push(userId);
+  }
+};
+```
+
+**Good implementation:**
+
+```js
+const updateGroupChat = async (user, id, body) => {
+  const actorId = user.id;
+  const ownerId = user.owner_id || actorId;
+  const group = await getGroupChatById(user, id);
+
+  // Ownership is checked against the account owner
+  if (group.owner_group.id !== ownerId) {
+    throw createError.BadRequest(YOU_ARE_NOT_THE_GROUP);
+  }
+
+  // Participation uses the actor so the staff member is the one added to the group
+  if (!members.includes(actorId)) {
+    members.push(actorId);
+  }
+};
+```
+
+---
+
+## 32. Guard each migration step independently, not the whole migration
+
+A single outer `if (!column_exists)` around an entire multi-step migration is fragile: if the column is added but the backfill, NOT NULL conversion, or FK constraint fails, the next run will see the column and skip every remaining step, leaving the DB permanently in a half-applied state. Re-read the table state between steps and guard each DDL operation with its own precondition check so re-runs converge to the target state.
+
+**Bad implementation:**
+
+```js
+async up(queryInterface) {
+  const tableDescription = await queryInterface.describeTable(REMINDER);
+
+  if (!tableDescription.customer_id) {
+    await queryInterface.sequelize.query(`ALTER TABLE ${REMINDER} ADD COLUMN customer_id CHAR(36) NULL`);
+    await queryInterface.sequelize.query(`UPDATE ${REMINDER} r INNER JOIN ${CONTACT} c ON c.id = r.contact_id SET r.customer_id = c.customer_id`);
+    await queryInterface.sequelize.query(`DELETE FROM ${REMINDER} WHERE customer_id IS NULL`);
+    // If any earlier step fails, these never run on retry because the column already exists
+    await queryInterface.sequelize.query(`ALTER TABLE ${REMINDER} MODIFY COLUMN customer_id CHAR(36) NOT NULL, ADD CONSTRAINT reminders_customer_id_foreign_idx FOREIGN KEY (customer_id) REFERENCES ${CUSTOMER}(id)`);
+  }
+}
+```
+
+**Good implementation:**
+
+```js
+async up(queryInterface) {
+  const initial = await queryInterface.describeTable(REMINDER);
+
+  if (!initial.customer_id) {
+    await queryInterface.sequelize.query(`ALTER TABLE ${REMINDER} ADD COLUMN customer_id CHAR(36) NULL`);
+  }
+
+  // Backfill is idempotent (WHERE customer_id IS NULL) — always safe to re-run
+  await queryInterface.sequelize.query(
+    `UPDATE ${REMINDER} r INNER JOIN ${CONTACT} c ON c.id = r.contact_id
+     SET r.customer_id = c.customer_id WHERE r.customer_id IS NULL`
+  );
+
+  const afterBackfill = await queryInterface.describeTable(REMINDER);
+  if (afterBackfill.customer_id && afterBackfill.customer_id.allowNull !== false) {
+    await queryInterface.sequelize.query(`ALTER TABLE ${REMINDER} MODIFY COLUMN customer_id CHAR(36) NOT NULL`);
+  }
+
+  const [existingFk] = await queryInterface.sequelize.query(
+    `SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '${REMINDER}'
+       AND CONSTRAINT_NAME = 'reminders_customer_id_foreign_idx'`
+  );
+  if (!existingFk.length) {
+    await queryInterface.sequelize.query(
+      `ALTER TABLE ${REMINDER} ADD CONSTRAINT reminders_customer_id_foreign_idx
+       FOREIGN KEY (customer_id) REFERENCES ${CUSTOMER}(id) ON UPDATE CASCADE ON DELETE CASCADE`
+    );
+  }
+}
+```
+
+---
+
+## 33. Destructive down migrations must refuse to run when data would be lost
+
+A `down` migration that silently deletes rows to revert a schema change (e.g., `DELETE FROM reminders WHERE contact_id IS NULL` to restore a NOT NULL constraint) destroys data the operator may not expect to lose. Instead, count the rows that would be deleted and throw a descriptive error telling the operator to resolve them manually. Rollbacks should be safe by default.
+
+**Bad implementation:**
+
+```js
+async down(queryInterface, Sequelize) {
+  if (tableDescription.contact_id && tableDescription.contact_id.allowNull === true) {
+    await queryInterface.sequelize.query(`DELETE FROM ${REMINDER} WHERE contact_id IS NULL`); // silent data loss
+    await queryInterface.changeColumn(REMINDER, 'contact_id', { type: Sequelize.INTEGER, allowNull: false });
+  }
+}
+```
+
+**Good implementation:**
+
+```js
+async down(queryInterface, Sequelize) {
+  if (tableDescription.contact_id && tableDescription.contact_id.allowNull === true) {
+    const [[{ n }]] = await queryInterface.sequelize.query(
+      `SELECT COUNT(*) AS n FROM ${REMINDER} WHERE contact_id IS NULL`
+    );
+    if (Number(n) > 0) {
+      throw new Error(
+        `[Migration 189 down] Refusing to delete ${n} reminders with contact_id IS NULL. Resolve manually before rolling back.`
+      );
+    }
+    await queryInterface.changeColumn(REMINDER, 'contact_id', { type: Sequelize.INTEGER, allowNull: false });
+  }
+}
+```
+
+---
+
+## 34. Keep Sequelize model types in sync with the underlying column type
+
+When a migration creates a column as `CHAR(36)` (UUID), the Sequelize model definition must declare `DataTypes.UUID`, not `DataTypes.INTEGER`. A type mismatch is silently accepted by Sequelize at model-load time but corrupts inserts, breaks foreign key joins, and produces confusing runtime errors. Whenever a migration changes a column type, update the model in the same PR.
+
+**Bad implementation:**
+
+```js
+// Migration adds CHAR(36) (UUID)
+await queryInterface.sequelize.query(
+  `ALTER TABLE ${REMINDER} ADD COLUMN customer_id CHAR(36) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NULL`
+);
+
+// Model still declares INTEGER — type drift
+module.exports = (sequelize, DataTypes) => sequelize.define('reminder', {
+  customer_id: {
+    type: DataTypes.INTEGER, // WRONG — column is a UUID
+    allowNull: false,
+  },
+});
+```
+
+**Good implementation:**
+
+```js
+// Model matches the migration's CHAR(36) UUID column
+module.exports = (sequelize, DataTypes) => sequelize.define('reminder', {
+  customer_id: {
+    type: DataTypes.UUID,
+    allowNull: false,
+  },
+});
+```
+
+---
+
+## 35. Do not open a transaction for a single atomic statement
+
+A transaction that wraps exactly one SQL statement adds no atomicity guarantee (single statements are already atomic) but does add overhead, extra failure modes (commit/rollback branching), and noise. Only open a transaction when two or more writes must succeed or fail together.
+
+**Bad implementation:**
+
+```js
+const viewAllNotification = async (user) => {
+  const t = await sequelize.transaction();
+  try {
+    await updateWhere(
+      NOTIFICATION,
+      { user_id: user.id, already_read: false },
+      { already_read: true },
+      t
+    );
+    await t.commit();
+    return { message: UPDATE_SUCCESS };
+  } catch (error) {
+    await t.rollback();
+    throw error;
+  }
+};
+```
+
+**Good implementation:**
+
+```js
+const viewAllNotification = async (user) => {
+  try {
+    await updateWhere(
+      NOTIFICATION,
+      { user_id: user.id, already_read: false },
+      { already_read: true }
+    );
+    return { message: UPDATE_SUCCESS };
+  } catch (error) {
+    console.error('viewAllNotification error', error);
+    throw error;
+  }
+};
+```
+
+## Batch associated lookups with a single findAll instead of Promise.all + findOne
+
+When enriching a list of rows with related data, issuing one query per item (even in parallel with Promise.all) is an N+1 pattern: it multiplies round-trips, saturates the pool and scales poorly. Collect the foreign keys, issue one `findAll` with `{ [Op.in]: ids }`, and index the result by key in a Map. Order the query so the first row per key wins (e.g. most recent), and keep only the first occurrence when populating the Map.
+
+**Bad implementation:**
+
+```js
+const boByCustomerId = new Map();
+await Promise.all(
+  customerIds.map(async (customerId) => {
+    const bo = await models[BUSINESS_OPPORTUNITY].findOne({
+      where: {
+        customer_id: customerId,
+        status: { [Op.in]: BO_POSITIVE_STATUSES },
+      },
+      attributes: ['id', 'contact'],
+      order: [['updated_at', 'DESC']],
+    });
+    if (bo) boByCustomerId.set(customerId, bo);
+  })
+);
+```
+
+**good implementation**
+
+```js
+const boByCustomerId = new Map();
+if (customerIds.length) {
+  const boRows = await models[BUSINESS_OPPORTUNITY].findAll({
+    where: {
+      customer_id: { [Op.in]: customerIds },
+      status: { [Op.in]: BO_POSITIVE_STATUSES },
+    },
+    attributes: ['id', 'customer_id', 'updated_at'],
+    include: [
+      { model: models[PRODUCT], required: false, attributes: ['id', 'name'] },
+      { model: models[CUSTOMER], required: false, attributes: ['id', 'company_name'] },
+    ],
+    order: [
+      ['customer_id', 'ASC'],
+      ['updated_at', 'DESC'],
+      ['id', 'DESC'],
+    ],
+  });
+  for (const bo of boRows) {
+    if (!boByCustomerId.has(bo.customer_id)) boByCustomerId.set(bo.customer_id, bo);
+  }
+}
+```
+
+## Read foreign keys from the owning row, not through an optional association
+
+When a column lives directly on the parent row (NOT NULL, its own column), use it. Reaching through an included association to get the same FK forces an INNER JOIN, silently drops rows whose association is nullable/missing, and couples the query to a relation you may not even need. Query the own column and make the include a LEFT JOIN so optional related entities do not filter out valid rows.
+
+**Bad implementation:**
+
+```js
+const reminders = await models[REMINDER].findAll({
+  where: { /* ... */ },
+  include: [
+    {
+      model: models[CONTACT],
+      required: true, // INNER JOIN: drops contactless reminders
+      attributes: ['id', 'first_name', 'last_name', 'customer_id'],
+    },
+  ],
+});
+
+const customerIds = [
+  ...new Set(reminders.map((r) => r.contact?.customer_id).filter(Boolean)),
+];
+// ...
+const bo = contact?.customer_id ? boByCustomerId.get(contact.customer_id) : null;
+```
+
+**good implementation**
+
+```js
+const reminders = await models[REMINDER].findAll({
+  where: { /* ... */ },
+  include: [
+    {
+      model: models[CONTACT],
+      required: false, // LEFT JOIN: contactless reminders still returned
+      attributes: ['id', 'first_name', 'last_name'],
+    },
+  ],
+});
+
+// customer_id is NOT NULL on reminder itself — read it directly
+const customerIds = [...new Set(reminders.map((r) => r.customer_id).filter(Boolean))];
+// ...
+const bo = r.customer_id ? boByCustomerId.get(r.customer_id) : null;
+```
+
+## Scope authenticated queries to req.authUserId, not req.user
+
+`req.user` is whatever the auth middleware loaded (often the account owner, an impersonated user, or a shared context), and its columns are only the ones that middleware happened to select. Persisted scoping (session owner, goal, "my" filters) must use `req.authUserId` so staff/sub-users see their own data, not the owner's. Avoid reading fields off `req.user` that do not exist on the model (e.g. `user.timezone` when USER has no such column) — silent `undefined` then falls through to a default and masks the bug.
+
+**Bad implementation:**
+
+```js
+// controller
+const result = await paymentService.getDailyCallsKpi(req.user, req.query);
+
+// service
+const getDailyCallsKpi = async (user, query = {}) => {
+  const timezone = query.timezone || user.timezone || TIMEZONE; // user.timezone does not exist
+  // ...
+  where: { user_id: user.id }, // scopes to owner, not the caller
+  // ...
+  where: { user_id: user.id, year: moment().tz(timezone).year() },
+};
+```
+
+**good implementation**
+
+```js
+// controller
+const result = await paymentService.getDailyCallsKpi(req.authUserId, req.query);
+
+// service
+const getDailyCallsKpi = async (authUserId, query = {}) => {
+  const timezone = query.timezone || TIMEZONE;
+  // ...
+  where: { user_id: authUserId },
+  // ...
+  where: { user_id: authUserId, year: moment().tz(timezone).year() },
+};
+```
+
+## Match response casing to the convention of sibling endpoints
+
+Within one API surface (e.g. a dashboard namespace), response keys should follow a single casing convention. Mixing `camelCase` into an otherwise `snake_case` family forces the frontend to special-case individual endpoints and is a common review finding. Before shipping a new endpoint, check a sibling response and match it — including nested objects.
+
+**Bad implementation:**
+
+```js
+return {
+  id: r.id,
+  type: r.type,
+  scheduledAt: r.scheduled_at,
+  contact: contact ? { id: contact.id, fullName } : null,
+  businessOpportunity: bo ? { id: bo.id, name: bo.contact || null } : null,
+};
+
+// and, in a sibling KPI:
+return { total, positive, negative, dailyGoal, progressPercent };
+```
+
+**good implementation**
+
+```js
+return {
+  id: r.id,
+  type: r.type,
+  scheduled_at: r.scheduled_at,
+  contact: contact ? { id: contact.id, full_name: buildContactFullName(contact) } : null,
+  business_opportunity: bo ? { id: bo.id, name: buildBusinessOpportunityName(bo) } : null,
+};
+
+// sibling KPI, same convention:
+return { total, positive, negative, daily_goal: dailyGoal, progress_percent: progressPercent };
+```

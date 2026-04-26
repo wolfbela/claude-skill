@@ -1,6 +1,6 @@
 ---
-name: holon-feature
-description: When I want to create a feature for the project-holon
+name: new-feature
+description: When I want to create a feature for projects from github issues
 ---
 
 The project is a one repo with the front and the back in the same directory.
@@ -24,15 +24,15 @@ Look at the adapted section in the `README.md` file for the feature.
 
 ## Step 3: go to brainstorm
 
-Go to plane mode to ask me all the question needed and explore the code to keep a logique all threw the process.
+Go to plan mode to ask me all the question needed and explore the code to keep a logique all threw the process.
 
 ## Step 3.5: Conditional for **front only**
 
-If the code is for a front page and visuals in the codebase. It is necessary to launch the script `critique` from impeccable to have way to improve.
+If the code is for a front page and visuals in the codebase. It is necessary to launch the skill `critique` from impeccable to have way to improve.
 
 So you need to:
 
-1. Launch the script
+1. Launch the skill
 2. Look at the report
 3. Apply the fixes
 
