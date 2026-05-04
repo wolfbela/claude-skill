@@ -196,7 +196,8 @@
       "Bash(tee /tmp/qa_pr_1036.log)",
       "Bash(tee /tmp/qa_pr_1035.log)",
       "Bash(tee /tmp/qa_pr_1034.log)",
-      "Bash(tee /tmp/qa_pr_1033.log)"
+      "Bash(tee /tmp/qa_pr_1033.log)",
+      "Bash(git *)"
     ],
     "additionalDirectories": [
       "/tmp",

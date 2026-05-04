@@ -51,6 +51,7 @@ For each PR, analyze the code (the diff) and the description to understand the c
 ### Step 4: Format the output
 
 **If it's a single PR number**, use the format of the file `./assets/message_template.md`
+  > Add the ticket associated to the qa (the link of the ticket). You have to get the ticket in the PR description
 
 **If it's a list of PR numbers**, use the same format for each PR, separated by `---`.
 

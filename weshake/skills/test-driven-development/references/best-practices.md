@@ -1295,3 +1295,679 @@ return {
 // sibling KPI, same convention:
 return { total, positive, negative, daily_goal: dailyGoal, progress_percent: progressPercent };
 ```
+
+---
+
+## Validate required environment variables at the use site
+
+When a code path depends on an env var (webhook URL, API key, bucket name) and a missing value would silently produce a malformed URL or a 4xx from an external API, assert it at the use site and throw a clear error. `${process.env.PLATFORM_API_URL}/api/v1/...` becomes `"undefined/api/v1/..."` if the var is missing — the call to the external service then fails with a confusing 404 hours later. Fail fast with the variable name in the message instead.
+
+**Bad implementation:**
+
+```js
+const webhookUrl = `${process.env.PLATFORM_API_URL}/api/v1/onboarding/webhooks`;
+const personPayload = OnboardingAPI.createPersonPayload(employee, ownerDocReg.onboarding_id, true, true);
+await OnboardingAPI.startVerification(personPayload, webhookUrl);
+```
+
+**Good implementation:**
+
+```js
+if (!process.env.PLATFORM_API_URL) {
+  throw createError.InternalServerError('PLATFORM_API_URL environment variable is not defined');
+}
+
+const webhookUrl = `${process.env.PLATFORM_API_URL}/api/v1/onboarding/webhooks`;
+const personPayload = OnboardingAPI.createPersonPayload(employee, ownerDocReg.onboarding_id, true, true);
+await OnboardingAPI.startVerification(personPayload, webhookUrl);
+```
+
+---
+
+## Make webhook processing idempotent by short-circuiting when stored state already matches
+
+Webhooks are retried by providers (often multiple times within seconds). If a handler downloads documents, calls external APIs, or writes side effects, re-applying the same payload wastes resources and can race against itself. Before doing any work, compare the incoming status with the persisted one and return an `already_processed` acknowledgement when they match.
+
+**Bad implementation:**
+
+```js
+const targetUser = await AdminUserService.getUser(documentRegistration.user_id, lang);
+const statusLower = status.toLowerCase();
+// Always re-downloads docs and rewrites the row, even if status hasn't changed
+const documentsToStore = await this._downloadDocuments(verificationId);
+await this._updateRegistration(documentRegistration, { docv_verification_status: statusLower, ...documentsToStore });
+```
+
+**Good implementation:**
+
+```js
+const statusLower = status.toLowerCase();
+
+if ((documentRegistration.docv_verification_status || '').toLowerCase() === statusLower) {
+  return { success: true, status: 'already_processed', verification_id: verificationId };
+}
+
+const targetUser = await AdminUserService.getUser(documentRegistration.user_id, lang);
+const documentsToStore = await this._downloadDocuments(verificationId);
+await this._updateRegistration(documentRegistration, { docv_verification_status: statusLower, ...documentsToStore });
+```
+
+---
+
+## Use the structured logger with context metadata, not console.error string concatenation
+
+`console.error('Failed to do X:', err)` produces an unstructured, ungrep-able line and loses request context. Use the project logger with a static message and a metadata object so logs are queryable by field (employeeId, error.message, stack) in the aggregator.
+
+**Bad implementation:**
+
+```js
+console.error('Onboarding started but no DOCV verification id returned for employee:', employee.id);
+// ...
+requestEmitSocket(notificationData).catch((err) =>
+  console.error('Failed to emit DOCV upload required notification:', err)
+);
+// ...
+console.error('Webhook processing failed:', error);
+```
+
+**Good implementation:**
+
+```js
+const logger = require('../../helpers/logger.helper');
+
+logger.error('Onboarding started but no DOCV verification id returned for employee', { employeeId: employee.id });
+// ...
+requestEmitSocket(notificationData).catch((err) =>
+  logger.error('Failed to emit DOCV upload required notification', { error: err.message })
+);
+// ...
+logger.error('Webhook processing failed', { error: error?.message, stack: error?.stack });
+```
+
+---
+
+## Do not leak internal error messages in HTTP responses
+
+When an endpoint catches an exception and returns an error payload, log the details server-side but keep the HTTP body generic. Echoing `error.message` (or `error.stack`) to the caller leaks DB column names, file paths, library internals, and SQL — useful for attackers and noisy for legitimate clients.
+
+**Bad implementation:**
+
+```js
+} catch (error) {
+  logger.error('Webhook processing failed', { error: error?.message, stack: error?.stack });
+  return res.status(500).json({
+    success: false,
+    error: 'Webhook processing failed',
+    detail: error?.message, // leaks internal info
+  });
+}
+```
+
+**Good implementation:**
+
+```js
+} catch (error) {
+  logger.error('Webhook processing failed', { error: error?.message, stack: error?.stack });
+  return res.status(500).json({
+    success: false,
+    error: 'Webhook processing failed',
+  });
+}
+```
+
+---
+
+## Restrict file-upload MIME allowlists to canonical IANA types
+
+`image/jpg` is not a valid MIME type — the IANA-registered value is `image/jpeg`. Some browsers/clients send the non-canonical form, but accepting both invites bypasses (a hostile client can claim `image/jpg` to skip stricter `image/jpeg` checks elsewhere). Accept only the canonical type and rely on the extension allowlist for `.jpg` files.
+
+**Bad implementation:**
+
+```js
+const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf'];
+```
+
+**Good implementation:**
+
+```js
+const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf'];
+```
+
+---
+
+## Normalize external string values before storing and comparing
+
+External providers may send the same status with inconsistent casing (`"COMPLETED"`, `"Completed"`, `"completed"`). Storing the raw value and comparing against a lowercase enum produces false negatives in idempotency checks and breaks downstream switches. Lowercase (or uppercase) once at the boundary, then store and compare on the normalized form.
+
+**Bad implementation:**
+
+```js
+const statusLower = status.toLowerCase();
+// ... compare lowercase against stored mixed-case value:
+if (documentRegistration.docv_verification_status === statusLower) { /* never matches if stored "Completed" */ }
+// ... but persist the original casing:
+await update(REGISTRATION, { id }, { docv_verification_status: status });
+```
+
+**Good implementation:**
+
+```js
+const statusLower = status.toLowerCase();
+if ((documentRegistration.docv_verification_status || '').toLowerCase() === statusLower) {
+  return { success: true, status: 'already_processed' };
+}
+// Persist the normalized form so future comparisons line up
+await update(REGISTRATION, { id }, { docv_verification_status: statusLower });
+```
+
+---
+
+## Tighten free-string ID validators with a character pattern and a max length
+
+`Joi.string().required()` on an external ID accepts arbitrary content of any length — newlines, control characters, 1 MB strings. When the ID flows into a URL path, an external API call, or a `LIKE` query, this is a vector for path traversal, header injection, and DoS. Constrain external IDs to the alphabet the provider actually emits and cap the length.
+
+**Bad implementation:**
+
+```js
+const schemaDocvByIdParams = {
+  params: Joi.object({
+    id: Joi.string().required(),
+  }),
+};
+```
+
+**Good implementation:**
+
+```js
+const schemaDocvByIdParams = {
+  params: Joi.object({
+    id: Joi.string()
+      .pattern(/^[a-zA-Z0-9_-]+$/)
+      .max(255)
+      .required(),
+  }),
+};
+```
+
+---
+
+## Derive sub-user access rights from the owner's modules, not the global permission catalog
+
+When provisioning a staff/employee user, the access-rights object must only contain the modules the **owner** has subscribed to. Iterating over the global `ROLE_PERMISSION_FIELDS` catalog grants flags for modules the account does not have — the row will carry `weshake_card: false` even on plans without the card module, masking later activations and corrupting admin views. Iterate over `getModulesForUser(ownerUser)` so the shape mirrors the owner's surface.
+
+**Bad implementation:**
+
+```js
+const buildDashboardOnlyAccessRights = () => {
+  const accessRights = {};
+  for (const field of ROLE_PERMISSION_FIELDS) { // every flag in the global catalog
+    accessRights[field] = field === 'dashboard';
+  }
+  return accessRights;
+};
+
+const buildAccessRightsFromRole = (role, ownerUser) => {
+  const ownerModules = getModulesForUser(ownerUser);
+  const accessRights = {};
+  for (const field of ROLE_PERMISSION_FIELDS) {
+    if (ownerModules.includes(field)) {
+      accessRights[field] = role[field] === true;
+    }
+  }
+  return accessRights;
+};
+```
+
+**Good implementation:**
+
+```js
+const buildDashboardOnlyAccessRights = (ownerUser) => {
+  const ownerModules = getModulesForUser(ownerUser);
+  const accessRights = {};
+  for (const field of ownerModules) {
+    accessRights[field] = field === 'dashboard';
+  }
+  return accessRights;
+};
+
+const buildAccessRightsFromRole = (role, ownerUser) => {
+  const ownerModules = getModulesForUser(ownerUser);
+  const accessRights = {};
+  for (const field of ownerModules) {
+    accessRights[field] = role[field] === true;
+  }
+  return accessRights;
+};
+```
+
+---
+
+## Centralize cross-module flag/enum lists in a shared constant
+
+Hardcoding a long array of permission flags (or any enum-like list) at the top of a validator file means the next time the catalog grows, two locations must be updated and inevitably drift. Move the list to `appConst` (or a shared module) and import it everywhere. Drift here silently disables validation for the new flags.
+
+**Bad implementation:**
+
+```js
+// validator.role.js
+const PERMISSION_FLAGS = [
+  'account', 'setting', 'chat', 'formula', 'dashboard', 'customers', 'suppliers',
+  'products', 'quotations', 'invoices', 'credit_notes', 'subscription', 'presentation',
+  'find_individual', 'connections', 'campaigns', 'social_risk', 'balance', 'statement',
+  'transfers', 'beneficiary', 'weshake_card', 'rib', 'call_manager',
+];
+
+const PERMISSION_FIELDS_SCHEMA = Object.fromEntries(
+  PERMISSION_FLAGS.map((flag) => [flag, Joi.boolean().allow(null).optional()])
+);
+```
+
+**Good implementation:**
+
+```js
+// validator.role.js
+const { ROLE_PERMISSION_FIELDS } = appConst;
+
+const PERMISSION_FIELDS_SCHEMA = Object.fromEntries(
+  ROLE_PERMISSION_FIELDS.map((flag) => [flag, Joi.boolean().allow(null).optional()])
+);
+```
+
+---
+
+## Layer a coarse audience guard alongside fine-grained permission checks
+
+`permitStaffRole('setting')` checks whether the caller has the `setting` permission, but it does not verify the caller is actually a staff/admin user — a regular user with a hand-crafted role could pass it. For sensitive endpoints (role create/delete, settings, billing), add a coarse `requireStaff` middleware **before** the permission check so non-staff requests are rejected even if their role flags somehow line up. Defense in depth.
+
+**Bad implementation:**
+
+```js
+router.post(
+  '/',
+  asyncMiddleware(checkLogin),
+  asyncMiddleware(verifyUserToken),
+  asyncMiddleware(verifyPlatformToken),
+  permitStaffRole('setting'), // only checks the permission flag, not the staff bit
+  validate(schema_createRole),
+  asyncMiddleware(createRole),
+);
+```
+
+**Good implementation:**
+
+```js
+const requireStaff = (req, res, next) => {
+  const lang = req.lang || appConst.HEADER.LOCALE_DEFAULT;
+  if (!req.user?.staff) {
+    throw createApiError(403, commonMessage(lang).YOU_DO_NOT_HAVE_ACCESS_TRANSMISSION, ERROR_CODE.STAFF_PERMISSION_DENIED);
+  }
+  next();
+};
+
+router.post(
+  '/',
+  asyncMiddleware(checkLogin),
+  asyncMiddleware(verifyUserToken),
+  asyncMiddleware(verifyPlatformToken),
+  requireStaff,                  // coarse audience guard first
+  permitStaffRole('setting'),    // then fine-grained permission
+  validate(schema_createRole),
+  asyncMiddleware(createRole),
+);
+```
+
+---
+
+## Map intermediate "awaiting review" provider statuses to null, not to a binary outcome
+
+When mapping a provider's screening/verification result to a UI-facing `clean | flagged` value, an intermediate state like `REQUIRES_REVIEW` must NOT collapse to `flagged`. Returning `flagged` for a row that is still being reviewed triggers downstream "onboarding failed" logic and locks users out. Map the intermediate state to `null` (unknown / pending) and only emit `clean | flagged` once the provider has actually decided.
+
+**Bad implementation:**
+
+```js
+// `requires_review` is truthy, so `screening.result ? ... : null` falls into the ternary
+const screeningResult = screening.result ? (screening.isClean ? 'clean' : 'flagged') : null;
+
+return {
+  // ...
+  is_onboarding_failed: identityStatus === 'failed' || screeningResult === 'flagged', // false-positive failure
+};
+```
+
+**Good implementation:**
+
+```js
+const isAwaitingReview = screening.result === COMPLY_ADVANTAGE.SCREENING_RESULTS.REQUIRES_REVIEW;
+const screeningResult = !screening.result || isAwaitingReview
+  ? null
+  : screening.isClean ? 'clean' : 'flagged';
+
+return {
+  // ...
+  is_onboarding_failed: identityStatus === 'failed' || screeningResult === 'flagged',
+};
+```
+
+---
+
+## Reuse a single Joi schema object for routes that share the same params shape
+
+When multiple routes accept the exact same params (typically `{ id }`), define one schema and export it under both names instead of duplicating the literal. Duplication invites drift — one route gets `Joi.number().integer().positive()` tightened to a UUID while the other keeps the integer rule, and only a code reviewer catches it.
+
+**Bad implementation:**
+
+```js
+module.exports.schemaGetEmployeeById = {
+  params: Joi.object({
+    id: Joi.number().integer().positive().required(),
+  }),
+};
+
+module.exports.schemaGetCardOnboardingStatus = {
+  params: Joi.object({
+    id: Joi.number().integer().positive().required(),
+  }),
+};
+```
+
+**Good implementation:**
+
+```js
+const idParamsSchema = {
+  params: Joi.object({
+    id: Joi.number().integer().positive().required(),
+  }),
+};
+
+module.exports.schemaGetEmployeeById = idParamsSchema;
+module.exports.schemaGetCardOnboardingStatus = idParamsSchema;
+```
+
+---
+
+## Use the shared timezone constant instead of hardcoded "Europe/Paris"
+
+The codebase exposes `appConst.TIMEZONE` as the single source of truth for the default timezone. Files that redeclare `const DEFAULT_TIMEZONE = 'Europe/Paris'` drift from that source the day the platform expands to a new region, and the affected module silently keeps computing call windows / KPIs in the old zone. Always pull from the shared constant.
+
+**Bad implementation:**
+
+```js
+const DEFAULT_TIMEZONE = 'Europe/Paris';
+
+const getNowForUser = (user) => moment.tz(user?.timezone || DEFAULT_TIMEZONE);
+```
+
+**Good implementation:**
+
+```js
+const DEFAULT_TIMEZONE = appConst.TIMEZONE;
+
+const getNowForUser = (user) => moment.tz(user?.timezone || DEFAULT_TIMEZONE);
+```
+
+---
+
+## Do not duplicate list-level metadata on every row of a paginated response
+
+If a value is the same for every row in a paginated response (e.g. the queue's `total`, the user's `quota`), it is metadata, not row data. Returning it on each row inflates the payload, encourages frontends to read it from an arbitrary row (which breaks on empty pages), and forces the docs/schema to describe it twice. Put it once on the response envelope and remove it from the row schema.
+
+**Bad implementation:**
+
+```json
+{
+  "items": [
+    { "id": 1, "position": 1, "total": 42 },
+    { "id": 2, "position": 2, "total": 42 },
+    { "id": 3, "position": 3, "total": 42 }
+  ],
+  "page": 1,
+  "limit": 10
+}
+```
+
+**Good implementation:**
+
+```json
+{
+  "items": [
+    { "id": 1, "position": 1 },
+    { "id": 2, "position": 2 },
+    { "id": 3, "position": 3 }
+  ],
+  "total": 42,
+  "page": 1,
+  "limit": 10
+}
+```
+
+
+---
+
+## Match Joi param validators to the actual primary-key type
+
+A Joi `params` validator must mirror the column type the route's `:id` actually maps to. Copying `Joi.string().length(36).required()` (or `.uuid()`) onto a route whose target table uses an auto-increment integer makes every authenticated call return `400 "id length must be 36 characters long"`. The framework's default detail validator is permissive enough to hide the mismatch on standard CRUD routes, but `customRoutes` skip that default — so a hardcoded UUID rule on a custom route silently breaks production. Before adding a `params` validator to a `customRoutes` entry, open the corresponding model and check whether the primary key is `DataTypes.UUID` (CHAR(36)) or `DataTypes.INTEGER` and pick the matching Joi shape. Bonus: integration-test the new endpoint against a row created by the same suite — that's the only way the local manual run catches the type drift.
+
+**Bad implementation:**
+
+```js
+// src/module/contact/index.js — contacts.id is INTEGER autoIncrement
+customRoutes: [{
+  method: 'get',
+  path: '/:id/duplicates',
+  handler: getContactDuplicates,
+  validator: { params: Joi.object({ id: Joi.string().length(36).required() }) }, // every call → 400
+}],
+```
+
+**Good implementation:**
+
+```js
+// src/module/contact/index.js — match the model's INTEGER primary key
+customRoutes: [{
+  method: 'get',
+  path: '/:id/duplicates',
+  handler: getContactDuplicates,
+  validator: { params: Joi.object({ id: Joi.number().integer().positive().required() }) },
+}],
+```
+
+---
+
+## Make the displayed total equal the sum of its displayed parts
+
+When a response exposes both an aggregate score and the per-component breakdown that produced it, accumulate the **rounded** part values into the total — do not round the total separately from the parts. Otherwise users see `score = 87` while `sum(components.score) = 86` because the total was rounded from raw `rate * weight * MAX` floats while each part was rounded independently. Discrepancies of 1–2 points across components erode trust in the metric and break frontend assertions like "score equals the sum of the bars".
+
+**Bad implementation:**
+
+```js
+const buildDailyScoreComponents = (counts, goals, weights) => {
+  let scoreSum = 0;
+  for (const c of items) {
+    const rate = isActive ? Math.min(1, c.done / c.goal) : 0;
+    const partScore = Math.round(rate * normalizedWeight * DAILY_SCORE_MAX);
+    scoreSum += rate * normalizedWeight * DAILY_SCORE_MAX; // raw float, not partScore
+    components[key] = { ...c, score: partScore };
+  }
+  return { components, score: Math.round(scoreSum) }; // diverges from sum(components.score)
+};
+```
+
+**Good implementation:**
+
+```js
+const buildDailyScoreComponents = (counts, goals, weights) => {
+  let scoreSum = 0;
+  for (const c of items) {
+    const rate = isActive ? Math.min(1, c.done / c.goal) : 0;
+    const partScore = Math.round(rate * normalizedWeight * DAILY_SCORE_MAX);
+    scoreSum += partScore; // accumulate the rounded value the user actually sees
+    components[key] = { ...c, score: partScore };
+  }
+  return { components, score: scoreSum };
+};
+```
+
+---
+
+## Hoist loop-invariant lookups out of map/Promise.all bodies
+
+When every iteration of a loop calls a function whose result does not depend on the iteration variable (e.g. `getDailyScoreWeights(authUserId)` inside a per-team-member map), the function is invoked N times for the same answer. Compute it once before the loop and pass the resolved value into each iteration. This is distinct from the N+1 pattern: the lookup is not parameterized by the row, it is genuinely constant for the request, and yet a naive implementation still issues N reads against the same row in `crm_settings`.
+
+**Bad implementation:**
+
+```js
+const entries = await Promise.all(
+  teamUsers.map(async (member) => {
+    // getDailyScoreWeights(authUserId) hits CRM_SETTING once per member — same row, N times
+    const { components, score } = await computeDailyScoreForUser(member.id, authUserId, day);
+    return { user_id: member.id, score, components };
+  }),
+);
+```
+
+**Good implementation:**
+
+```js
+const [teamUsers, weightsResolved] = await Promise.all([
+  models[USER].findAll({ where: { owner_id: authUserId }, attributes: ['id', 'first_name', 'last_name'] }),
+  getDailyScoreWeights(authUserId), // resolved once, reused in every iteration
+]);
+
+const entries = await Promise.all(
+  teamUsers.map(async (member) => {
+    const { components, score } = await computeDailyScoreForUser(member.id, weightsResolved.weights, day);
+    return { user_id: member.id, score, components };
+  }),
+);
+```
+
+---
+
+## Clamp DB-loaded numeric ranges at the read site as defense in depth
+
+A validator that caps weights / ratios / probabilities to `[0, 1]` only protects values written through the validated route. Rows persisted before the validator existed, written by a sibling job, edited via the admin DB console, or migrated from another source can still hold `2`, `-3`, or `NaN`. When the read path multiplies these by `MAX_SCORE` it produces nonsense. Re-clamp at the read boundary so the consumer cannot be poisoned by historical or out-of-band writes — and so future relaxations of the validator do not silently corrupt scores.
+
+**Bad implementation:**
+
+```js
+return {
+  calls: Number(stored.calls ?? DAILY_SCORE_DEFAULT_WEIGHTS.calls),       // could be 2 or NaN
+  reminders: Number(stored.reminders ?? DAILY_SCORE_DEFAULT_WEIGHTS.reminders),
+  qualified: Number(stored.qualified ?? DAILY_SCORE_DEFAULT_WEIGHTS.qualified),
+};
+```
+
+**Good implementation:**
+
+```js
+const clampWeight = (raw, fallback) => {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) { return fallback; }
+  return Math.max(0, Math.min(1, n));
+};
+
+return {
+  calls: clampWeight(stored.calls, DAILY_SCORE_DEFAULT_WEIGHTS.calls),
+  reminders: clampWeight(stored.reminders, DAILY_SCORE_DEFAULT_WEIGHTS.reminders),
+  qualified: clampWeight(stored.qualified, DAILY_SCORE_DEFAULT_WEIGHTS.qualified),
+};
+```
+
+---
+
+## Validate timezone strings against an actual tz database, not just length
+
+A `Joi.string().trim().max(50)` accepts `"Mars/Olympus"`, `"Europe/Paaaaaris"`, or any garbage shorter than 50 chars. When that value is later passed to `moment.tz()`, moment silently falls back to UTC, computing the day window in the wrong zone and skewing every "today" KPI for that request. Validate the input against the IANA tz database at the validator boundary using `momentTz.tz.zone(value)` (returns null for unknown zones) so bad values are rejected with `400 timezone_invalid` instead of producing wrong-but-plausible numbers downstream.
+
+**Bad implementation:**
+
+```js
+const dailyScoreBaseQuery = Joi.object({
+  date: Joi.string().pattern(YYYY_MM_DD).optional(),
+  timezone: Joi.string().trim().max(50).optional(), // accepts any short string
+});
+```
+
+**Good implementation:**
+
+```js
+const momentTz = require('moment-timezone');
+
+const dailyScoreBaseQuery = Joi.object({
+  date: Joi.string().pattern(YYYY_MM_DD).optional(),
+  timezone: Joi.string()
+    .trim()
+    .max(50)
+    .custom((value, helpers) => (momentTz.tz.zone(value) ? value : helpers.message('timezone_invalid')))
+    .optional(),
+});
+```
+
+---
+
+## Reject future dates on "today/past" KPI endpoints at the validator
+
+KPI endpoints that compute "what happened on day X" are only meaningful when X is today or earlier — a future date produces an empty window and a misleading 0/100 score. Catching this in the controller wastes a round-trip and risks inconsistent error shapes. Add an `isNotFutureDate` predicate to the date validator so the route returns `400 date_in_future` before any DB work, and so the contract is documented in the schema itself.
+
+**Bad implementation:**
+
+```js
+date: Joi.string()
+  .pattern(YYYY_MM_DD)
+  .custom((value, helpers) => (isValidCalendarDate(value) ? value : helpers.message('date_invalid')))
+  .optional(),
+// Caller can request 2099-01-01 and gets back score: 0 with no error
+```
+
+**Good implementation:**
+
+```js
+const isNotFutureDate = (value) => value <= new Date().toISOString().slice(0, 10);
+
+date: Joi.string()
+  .pattern(YYYY_MM_DD)
+  .custom((value, helpers) => {
+    if (!isValidCalendarDate(value)) { return helpers.message('date_invalid'); }
+    if (!isNotFutureDate(value)) { return helpers.message('date_in_future'); }
+    return value;
+  })
+  .optional(),
+```
+
+---
+
+## Return the real provenance of a value, never a hardcoded label
+
+When a response advertises where a value came from (e.g. `weights_source: 'crm_setting'`, `pricing_source: 'plan_override'`), that field must reflect the **actual** branch taken at runtime. Hardcoding the "happy path" label is worse than omitting the field: it lies to the frontend and to support engineers debugging "why are my custom weights not applied" — they read `crm_setting` and stop investigating, even though defaults were silently used because the row was missing or the user was unauthenticated. Compute the source alongside the value and return it.
+
+**Bad implementation:**
+
+```js
+const getDailyScoreWeights = async (masterUserId) => {
+  if (!masterUserId) { return { ...DAILY_SCORE_DEFAULT_WEIGHTS }; } // defaults
+  const setting = await models[CRM_SETTING].findOne({ where: { user_id: masterUserId } });
+  if (!setting?.daily_score_weights) { return { ...DAILY_SCORE_DEFAULT_WEIGHTS }; } // defaults
+  return { /* stored values */ };
+};
+
+// controller
+return { /* ... */, weights_source: 'crm_setting' }; // lies in two of the three branches
+```
+
+**Good implementation:**
+
+```js
+const getDailyScoreWeights = async (masterUserId) => {
+  if (!masterUserId) { return { weights: { ...DAILY_SCORE_DEFAULT_WEIGHTS }, source: 'default' }; }
+  const setting = await models[CRM_SETTING].findOne({ where: { user_id: masterUserId } });
+  const stored = setting?.daily_score_weights;
+  if (!stored) { return { weights: { ...DAILY_SCORE_DEFAULT_WEIGHTS }, source: 'default' }; }
+  return { weights: { /* stored values */ }, source: 'crm_setting' };
+};
+
+// controller
+const { weights, source } = await getDailyScoreWeights(user.id);
+return { /* ... */, weights_source: source };
+```

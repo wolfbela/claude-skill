@@ -43,6 +43,8 @@ Use the matching `BASE_URL` in the generated test file. If you cannot determine 
 Create the file at: `tests/<module>.test.js`
 Use the exact base referenced in `./assets/test_template.js`.
 
+> **Note on the `tests/` directory.** The three API projects share a single test directory. The real files live in `api/tests/`. Both `api-2/tests` and `api-3/tests` are **symlinks pointing to `../api/tests`** — this is intentional and completely normal. Whichever API you are in, writing to `tests/<module>.test.js` writes to the same shared location, so a test only needs to be created once and is automatically available to all three APIs. Do not try to "fix" the symlinks or create per-API test directories.
+
 ## Step 3 — Test categories to cover for EACH endpoint
 
 For every endpoint found in the router, generate tests in this order:

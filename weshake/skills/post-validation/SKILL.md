@@ -26,6 +26,7 @@ I need 3 agents in parallèle resolving the PRs listed in $ARGUMENTS:
 - 1 with the skill /qa-report
 - 1 with the skill /front-doc
   > For **each PR** with the documentation for frontend you have to **create a ticket** with /ticket with the documentation for the front as a description.
+  > There is the need to add this assign_id for the ticket: `78d1e244-80dc-4e15-b842-1ce4863eae2d`
 - 1 to feed the best-practices files.
   > The goal is to check if **yhnlvy** put a fix to the PR and feed the best-practices documents
   > with what the fix could teach. You have to feed it using the format in `./assets/best-practice_template.md`

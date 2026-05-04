@@ -62,7 +62,7 @@ Immediately start brainstorming with the `/brainstorming` skill to:
 
 ### Step 3: Test the code **MANDATORY**
 
-You must run the /test-api skill to test.
+You must run the /api-test skill to test.
 
 ### Step 4: Push the code
 

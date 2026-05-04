@@ -27,7 +27,7 @@ argument-hint: <ticket(s) objective>
    - Which pages/screens are involved.
    - Whether the feature can be tested from the interface (OUI/NON) and, if yes, the exact click-by-click steps; if no, why and which alternative to use (Postman, script, indirect trigger).
    You MUST wait for the agent's report before writing the `How to test` section — do not guess front behavior from backend code alone.
-4. **Writing**: Write each ticket according to the template below. The `How to test` section must reflect the agent's findings (OUI ⇒ interface steps; NON ⇒ backend test with Postman + body + URL, with a short explanation of why the interface path isn't available).
+4. **Writing**: Write each ticket according to the template below. Each ticket MUST start with a `Product description` section (clear, user/product-facing, no technical jargon) followed by a `Technical description` section (developer-facing, with scope, approach, constraints). The `How to test` section must reflect the agent's findings (OUI ⇒ interface steps; NON ⇒ backend test with Postman + body + URL, with a short explanation of why the interface path isn't available).
 
 ## Output Template
 

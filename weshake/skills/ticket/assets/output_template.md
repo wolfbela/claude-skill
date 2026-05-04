@@ -1,8 +1,12 @@
 ## Title: [Theme] Brief ticket description (max 15 words)
 
-### Description
+### Product description
 
-<Clear explanation of what needs to be done and why>
+<Clear, non-technical explanation of the feature from a product/user perspective: who uses it, what problem it solves, what the expected user experience is, and the business value. Avoid implementation details, file paths, or code references. A non-technical PM or designer should understand it.>
+
+### Technical description
+
+<Clear explanation of what needs to be done and why, from a developer perspective: scope of the work, technical approach, constraints, dependencies and impacts.>
 
 ### Endpoints
 
