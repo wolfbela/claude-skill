@@ -59,6 +59,8 @@ Pour chaque fichier modifié dans le diff, détermine s'il a un impact front-end
 
 **Lecture du code front — OBLIGATOIRE**
 
+Avant de commencer la lecture du front. Il faut aller sur le dossier du front et faire un `git pull` pour s'assurer que le code est à jour depuis la branch `develop`.
+
 Tu DOIS appeler l'agent `front-browsing-file` via l'outil `Agent` (`subagent_type: "front-browsing-file"`) **avant** de rédiger la documentation. L'agent travaille dans `/Users/jycxed/Documents/nekudatech/weshake/front`.
 
 Fournis-lui, pour chaque endpoint/changement API identifié dans la PR :
@@ -70,7 +72,7 @@ Et demande-lui explicitement :
 2. Quels fichiers front (`src/api/...`, `src/features/...`, typages TS) doivent être mis à jour.
 3. Si l'endpoint n'est pas encore branché côté front, le signaler clairement.
 
-Tu dois attendre le rapport de l'agent avant d'écrire la documentation — n'invente pas le parcours front depuis le diff backend seul.
+Tu dois attendre le rapport de l'agent avant d'écrire la documentation — n'invente pas le parcours front depuis le diff backend seul. Dans le cas où l'agent ne trouve pas d'implémentation front à faire, ne fait pas la documentation.
 
 ### Étape 3 — Lire le code source pour comprendre le contexte
 

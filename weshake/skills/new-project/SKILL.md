@@ -50,7 +50,7 @@ Look at the `name` and `description_html` fields in the JSON response for the in
 
 ### Step 2: Enter plan mode
 
-Immediately start brainstorming with the `/brainstorming` skill to:
+Immediately start brainstorming with the plan mode skill to:
 
 1. **Fully understand the requirement**:
    > It has to go through all the dependence tree and ask relentlessly until having a complete understanding of the
@@ -60,11 +60,20 @@ Immediately start brainstorming with the `/brainstorming` skill to:
 4. **Understand existing patterns** to stay consistent with the current code
 5. **Ask questions** to the user about ambiguous points or implementation choices
 
-### Step 3: Test the code **MANDATORY**
+### Step 3: Code good practice
+
+When programming it is **MANDATORY** to follow those rules:
+  > in a clean, compact, elegant, efficient, pragmatic, readable, dry, kiss, yagni, secure, maintainable, bug free, no-regression, no tech-debt, no blind-spot, rock-solid way
+
+### Step 4: Test the code **MANDATORY**
 
 You must run the /api-test skill to test.
 
-### Step 4: Push the code
+### Step 5: Simplify the code
+
+Load the `/simplify` skill and apply it to the generated code
+
+### Step 6: Push the code
 
 You must commit the code in 1 or more commits **without mentioning CLAUDE**. Then push it and use the /pr-creation skill
 to create the associated PR.

@@ -21,13 +21,13 @@ Two possible ending:
 
 ## Step 2: Create documents to send and for self-improvement
 
-I need 3 agents in parallèle resolving the PRs listed in $ARGUMENTS:
-
-- 1 with the skill /qa-report
-- 1 with the skill /front-doc
-  > For **each PR** with the documentation for frontend you have to **create a ticket** with /ticket with the documentation for the front as a description.
+1. Launch the skill /front-doc
+  > For **each PR** with the documentation for frontend you have to **create a ticket** with /ticket with the documentation for the front as a description. (the ticket must be **in french**) If there is no documentation, do not create a ticket.
   > There is the need to add this assign_id for the ticket: `78d1e244-80dc-4e15-b842-1ce4863eae2d`
-- 1 to feed the best-practices files.
+2. Launch the skill /qa-report
+  > Get the links of the tickets created by /front-doc and use them to feed the qa report for the `Frontend doc: <frontend ticket doc URL>` part of the template.
+
+Launch 1 agent in parallel to feed the best-practices files.
   > The goal is to check if **yhnlvy** put a fix to the PR and feed the best-practices documents
   > with what the fix could teach. You have to feed it using the format in `./assets/best-practice_template.md`
   >
@@ -40,6 +40,10 @@ I need 3 agents in parallèle resolving the PRs listed in $ARGUMENTS:
   > When adding a new best practice, append it to BOTH files with the same content.
 
 **MANDATORY**: Ask me for rights to right to write where they need too write and read if needed
+
+## Step 3: Show the qa-report
+
+You need to show all qa reports to be able to copy those to send it directly.
 
 ## Rules:
 

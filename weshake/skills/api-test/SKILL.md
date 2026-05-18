@@ -146,6 +146,15 @@ The testing phase is in three steps:
    > On the **right container** launch the command `npm i` to install the modules and check it is working
 3. Launch the test files.
 
+## Step 6 - Create an interface
+
+You should do an interface for testing from a front.
+
+The goal is to do a "atomic front" to do the test and it should be as simple as possible and as practical as possible.
+We should be able to see the logs directly from this frontend and the values also.
+
+This is a simple interface juste to test that will be launched in a backend process.
+
 ## Rules
 
 - **NEVER skip an endpoint.** Every route in the router MUST be tested.

@@ -1,4 +1,10 @@
 Branch: <git branch>
+
+:link: associated link:
+- PR: <PR URL>
+- Ticket: <ticket URL>
+- Frontend doc: <frontend ticket doc URL>
+
 :memo: Change
 
 <Description of changes - be clear and concise, explain what was done and why>
